@@ -1,0 +1,38 @@
+version: 2.1
+
+parameters:
+  image:
+    type: string
+    default: "dnscrypt-server"
+  build_context:
+    type: string
+    default: "/home/circleci/dnscrypt-server-docker"
+  git_url:
+    type: string
+    default: "https://github.com/DNSCrypt/dnscrypt-server-docker.git"
+
+orbs:
+  multiarch: nanders/multiarch@1.0.6
+
+workflows:
+  build_dnscrypt_server_docker:
+    jobs:
+      - multiarch/build_x86_64:
+          name: "Build x86_64"
+          image: "<< pipeline.parameters.image >>"
+          build_context: "<< pipeline.parameters.build_context >>"
+          pre-steps:
+            - run: git clone << pipeline.parameters.git_url >> << pipeline.parameters.build_context >>
+      - multiarch/build_arm64:
+          name: "Build arm64"
+          image: "<< pipeline.parameters.image >>"
+          build_context: "<< pipeline.parameters.build_context >>"
+          pre-steps:
+            - run: git clone << pipeline.parameters.git_url >> << pipeline.parameters.build_context >>
+      - multiarch/create_and_push_manifests:
+          name: "Create and push manifests"
+          image: "<< pipeline.parameters.image >>"
+          tags: "date latest"
+          requires:
+            - "Build x86_64"
+            - "Build arm64"
