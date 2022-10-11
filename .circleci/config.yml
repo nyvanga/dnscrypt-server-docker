@@ -1,0 +1,45 @@
+version: 2.1
+
+orbs:
+  multiarch: nanders/multiarch@1.3.1
+
+workflows:
+  build_dnscrypt_server_docker:
+    jobs:
+      - multiarch/build_x86_64:
+          context:
+            - docker-hub
+          name: "Build x86_64"
+          image: dnscrypt-server
+          build_context: /home/circleci/dnscrypt-server-docker
+          pre-steps:
+            - run: git clone https://github.com/DNSCrypt/dnscrypt-server-docker.git /home/circleci/dnscrypt-server-docker
+      - multiarch/build_arm64:
+          context:
+            - docker-hub
+          name: "Build arm64"
+          image: dnscrypt-server
+          build_context: /home/circleci/dnscrypt-server-docker
+          pre-steps:
+            - run: git clone https://github.com/DNSCrypt/dnscrypt-server-docker.git /home/circleci/dnscrypt-server-docker
+      - multiarch/create_and_push_manifest:
+          context:
+            - docker-hub
+          name: "Manifest << matrix.tag >>"
+          image: dnscrypt-server
+          matrix:
+            parameters:
+              tag:
+                - date
+                - latest
+            alias: manifests
+          requires:
+            - "Build x86_64"
+            - "Build arm64"
+      - multiarch/remove_architecture_tags:
+          context:
+            - docker-hub
+          name: "Cleanup"
+          image: dnscrypt-server
+          requires:
+            - manifests
